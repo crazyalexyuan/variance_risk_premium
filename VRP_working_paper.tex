@@ -1,0 +1,469 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+\usepackage{times}
+
+\captionsetup[table]{font=small,labelfont=bf,skip=4pt}
+
+\title{\textbf{The Variance Risk Premium and a Defined-Risk Option Strategy}\\[4pt]
+\large Evidence from S\&P 500 options, 1990--2026}
+
+\author{Alex Yuan\\[2pt]\small Independent research project}
+\date{August 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+This study tests whether the variance risk premium (VRP) --- the tendency for option-implied
+volatility to exceed subsequently realised volatility --- exists, persists, and is captured by
+a defined-risk option strategy. Using 9,178 daily observations of the CBOE Volatility Index (VIX) against
+subsequent 21-day realised volatility of the S\&P 500 from 1990 to 2026, the mean premium is
+\textbf{+4.10 volatility points} (HAC 95\% CI [3.57, 4.62]). The result is robust to autocorrelation
+correction, distribution-free bootstrap, and decade-by-decade subsampling. A na\"ive t-test overstates
+the evidence by a factor of four, illustrating the consequences of ignoring overlapping windows.
+A simulated bull put spread capturing this premium returns \textbf{\$8.35 per trade} net of \$3.50
+costs across 9,201 trades, with no decay out-of-sample. Nine volatility-based timing filters were
+tested; \textbf{all nine underperformed unconditional entry}. The premium is shown to be compensation
+for crash risk rather than a market inefficiency: the distribution has skewness of $-3.65$ and every
+losing year coincides with an equity bear market. Principal limitations are the omission of volatility
+skew and the assumption of theoretical fills.
+\end{abstract}
+
+\vspace{4pt}
+\noindent\fbox{\begin{minipage}{0.97\textwidth}
+\textbf{\large Summary of findings}
+\smallskip
+
+\begin{tabular}{@{}p{0.52\textwidth}p{0.40\textwidth}@{}}
+\textbf{Does the premium exist?} & Yes. +4.10 vol points, $z=15.3$. \\[3pt]
+\textbf{Has it decayed since 1990?} & No. Every decade significant; 2020s mean 3.79. \\[3pt]
+\textbf{Is it an inefficiency?} & No. Skew $-3.65$; it pays for crash risk. \\[3pt]
+\textbf{Does a spread capture it?} & Yes in simulation. \$8.35/trade net. \\[3pt]
+\textbf{Does timing by VIX help?} & No. All nine filters were worse. \\[3pt]
+\textbf{Is it tradeable after costs?} & Not established. Skew and fills untested. \\
+\end{tabular}
+\end{minipage}}
+
+\section{Introduction}
+
+Selling options is widely claimed to be profitable on the grounds that ``implied volatility exceeds
+realised volatility.'' The claim is rarely accompanied by evidence, and where evidence is offered it
+is frequently invalidated by a statistical error: daily observations of a forward-looking volatility
+window overlap heavily, violating the independence assumption of standard inference.
+
+This study asks three questions in sequence. First, does the variance risk premium exist in S\&P 500
+index options, measured correctly? Second, has it persisted? Third, does a defined-risk option
+structure --- the bull put spread --- capture enough of it to matter after costs?
+
+The motivating context is a retail account of approximately £100 --- small enough that per-trade risk
+must be tightly bounded.
+This constrains the strategy space: cash-secured puts and covered calls require substantial collateral,
+whereas narrow vertical spreads bound maximum loss to tens of dollars per position. Whether such a
+structure retains any edge after commissions and bid--ask spread is the practical question behind the
+analysis.
+
+The paper finds that the premium is large and statistically robust once overlapping windows are handled
+correctly; that it has not decayed across three and a half decades, though its risk-adjusted
+attractiveness has; that a simulated defined-risk spread captures it profitably under every cost
+assumption tested; and that every attempt to time entry by volatility regime made results worse.
+Falsification criteria were pre-registered before any data was examined, and are reported against
+explicitly in Sections 3 and 4.
+
+\section{Data and Method}
+
+Daily closing values of \texttt{\^{}VIX}, \texttt{\^{}GSPC} and \texttt{\^{}IRX} were obtained from
+Yahoo Finance for 2 January 1990 to 14 August 2026, giving 9,178 complete observations. The sample
+begins in 1990 because CBOE back-computed the current VIX methodology only to that date.
+
+For each date $t$, realised volatility over the \emph{following} 21 trading days (approximately 30
+calendar days, matching the VIX horizon) was computed from log returns as
+\begin{equation}
+RV_{t \rightarrow t+21} = 100 \times \sqrt{\frac{252}{21}\sum_{i=1}^{21} r_{t+i}^{2}},
+\qquad r_t = \ln\!\left(\frac{P_t}{P_{t-1}}\right),
+\end{equation}
+using the zero-mean convention standard in the realised volatility literature. The variance risk
+premium is
+\begin{equation}
+VRP_t = VIX_t - RV_{t \rightarrow t+21}.
+\end{equation}
+
+Window alignment was verified by reconstructing individual observations manually and comparing them
+against the vectorised computation. This check detected one substantive error during development ---
+a backward-looking window --- which would have produced plausible but meaningless results.
+
+\subsection{Inference under overlapping windows}
+
+Consecutive observations share 20 of their 21 forward returns, inducing serial correlation to lag 21.
+Ordinary standard errors are therefore invalid. Three corrections were applied: (i) non-overlapping
+subsampling at every 21st observation, repeated across all 21 possible starting offsets; (ii)
+Newey--West heteroskedasticity- and autocorrelation-consistent standard errors with \texttt{maxlags}
+$=21$; and (iii) a bootstrap with 10,000 resamples drawn from the non-overlapping subsample, which
+assumes nothing about distributional shape.
+
+\section{Results I: The Variance Risk Premium}
+
+Mean VIX over the sample was 19.44 against mean subsequent realised volatility of 15.36. The premium
+averaged $+4.10$ volatility points, with a median of $+4.71$ and standard deviation of 6.63. It was
+positive in 85.8\% of observations.
+
+\subsection{Inference}
+
+\begin{table}[h]
+\centering
+\caption{Inference on the mean variance risk premium ($n=9{,}178$)}
+\begin{tabular}{@{}lccl@{}}
+\toprule
+Method & $t$ / $z$ & 95\% CI & Assumption \\
+\midrule
+Na\"ive one-sample $t$-test & 59.2 & --- & Independence (violated) \\
+Non-overlapping subsamples & 12.0 -- 13.8 & --- & None; discards 95\% of data \\
+Newey--West HAC & 15.3 & [3.57, 4.62] & Correct lag specification \\
+Bootstrap (10,000 draws) & --- & [3.31, 4.55] & None \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The na\"ive test overstates the evidence by approximately a factor of four, closely matching the
+$\sqrt{21}\approx 4.6$ predicted from the overlap structure. The regression's Durbin--Watson statistic
+of 0.094 (2.0 indicating no autocorrelation) independently confirms severe serial dependence. All three
+valid methods agree, and the distribution-free bootstrap brackets the HAC interval, so the conclusion
+is not an artefact of any single method's assumptions.
+
+\subsection{Distribution}
+
+\begin{table}[h]
+\centering
+\caption{Distribution of the variance risk premium (volatility points)}
+\begin{tabular}{@{}lrlr@{}}
+\toprule
+Statistic & Value & Statistic & Value \\
+\midrule
+Minimum & $-71.96$ & 75th percentile & $+7.23$ \\
+1st percentile & $-19.95$ & 95th percentile & $+11.71$ \\
+5th percentile & $-4.87$ & 99th percentile & $+16.65$ \\
+25th percentile & $+2.21$ & Maximum & $+30.77$ \\
+Median & $+4.71$ & Skewness & $-3.65$ \\
+Mean & $+4.10$ & Excess kurtosis & $29.27$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The interquartile range, $[+2.21, +7.23]$, is entirely positive: the typical period pays a modest,
+unremarkable premium. The asymmetry lies wholly in the tails. The worst observation ($-71.96$) is more
+than twice the magnitude of the best ($+30.77$), and the 1st percentile is worse than the 99th
+percentile is good.
+
+This is the payoff profile of an insurance seller. The economic interpretation follows directly: the
+premium is \emph{compensation for bearing crash risk}, not evidence of mispricing. Table 3 makes the
+point concrete.
+
+\begin{table}[h]
+\centering
+\caption{Six worst episodes (monthly minima)}
+\begin{tabular}{@{}lrrrl@{}}
+\toprule
+Date & VIX & Realised vol & VRP & Event \\
+\midrule
+2020-02-20 & 15.56 & 87.52 & $-71.96$ & COVID-19 crash begins \\
+2020-03-04 & 31.99 & 93.43 & $-61.44$ & COVID-19 crash \\
+2008-09-16 & 30.30 & 80.21 & $-49.91$ & Lehman Brothers collapse \\
+2008-11-04 & 47.73 & 74.80 & $-27.07$ & Post-Lehman crisis \\
+2025-04-02 & 21.51 & 47.90 & $-26.39$ & Tariff shock \\
+2011-08-01 & 23.66 & 48.43 & $-24.77$ & US sovereign downgrade \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The observation of 20 February 2020 is the most instructive in the dataset. VIX stood at 15.56 --- an
+unremarkable level implying a calm month ahead --- while realised volatility over the subsequent 21
+days was 87.52. The market's own forecast was wrong by a factor of five with no warning priced in.
+By contrast, the entry of 4 November 2008 at VIX 47.73 produced a smaller loss: by then the crisis was
+visible and priced. \emph{The danger is not high measured volatility; it is low volatility preceding
+an unanticipated shock.}
+
+\subsection{Sub-period stability}
+
+\begin{table}[h]
+\centering
+\caption{Variance risk premium by decade}
+\begin{tabular}{@{}lrrrrrc@{}}
+\toprule
+Period & $n$ & Mean & SD & \% positive & Mean/SD & HAC 95\% CI \\
+\midrule
+1990s & 2,527 & 5.45 & 4.31 & 92.5 & 1.26 & [4.84, 6.06] \\
+2000s & 2,515 & 3.35 & 7.08 & 81.5 & 0.47 & [2.23, 4.48] \\
+2010s & 2,516 & 3.68 & 5.44 & 84.3 & 0.68 & [2.92, 4.44] \\
+2020s & 1,620 & 3.79 & 9.61 & 84.4 & 0.39 & [1.97, 5.60] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Every decade's interval excludes zero, and the 2020s mean exceeds both the 2000s and 2010s: the premium
+has not decayed in magnitude. Two qualifications apply. The 1990s interval only just fails to overlap
+the 2000s, suggesting a single downward level shift after that decade rather than continuous decay,
+with the three subsequent decades statistically indistinguishable. More importantly, dispersion has
+more than doubled, so the ratio of premium to variability has fallen by roughly two-thirds (1.26 to
+0.39). \emph{The premium is the same size; the risk borne to collect it is substantially greater.}
+
+\subsection{Conditioning on the volatility regime}
+
+\begin{table}[h]
+\centering
+\caption{Variance risk premium by VIX level}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+VIX bucket & $n$ & Mean & Median & SD & \% positive & VRP/VIX \\
+\midrule
+$(0, 15]$ & 2,951 & 2.82 & 3.61 & 4.59 & 86.3 & 0.220 \\
+$(15, 20]$ & 2,804 & 4.11 & 5.02 & 5.37 & 87.1 & 0.237 \\
+$(20, 25]$ & 1,825 & 4.55 & 5.70 & 6.58 & 83.6 & 0.204 \\
+$(25, 30]$ & 864 & 5.56 & 6.83 & 7.56 & 84.4 & 0.204 \\
+$(30, 100]$ & 734 & 6.34 & 8.67 & 12.87 & 86.1 & 0.177 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Mean premium rises monotonically with VIX, contradicting the intuition that elevated volatility is
+dangerous to sell into. However, expressed as a proportion of implied volatility the premium is flat
+to slightly declining --- the larger absolute figures at high VIX reflect scaling rather than richer
+compensation. On a risk-adjusted basis the highest bucket is the \emph{worst}: mean/SD of 0.49 against
+0.77 for the $(15,20]$ bucket. Every bucket contains a catastrophic outcome, so no volatility regime
+offers safety.
+
+\subsection{Verdicts against pre-registered criteria}
+
+\textbf{F1} (``mean not significantly positive after correction'') --- \textbf{not triggered}.
+\textbf{F2} (``recent sub-period insignificant'') --- \textbf{not triggered}.
+\textbf{F3} (``implied per-trade edge below transaction costs'') --- \textbf{unresolved} with index
+data; addressed in Section 4.
+
+\section{Results II: A Simulated Defined-Risk Strategy}
+
+\subsection{Design}
+
+On every trading day, a \$1-wide bull put spread was opened on a SPY-scaled S\&P 500 (index $\div$ 10):
+short a put at $-0.30$ delta, long a put \$1 lower, 21 trading days to expiry, held to expiry. Both legs
+were priced by Black--Scholes using VIX as implied volatility and \texttt{\^{}IRX} as the risk-free rate.
+Profit and loss was computed from the actual subsequent index level, so outcomes reflect real market
+paths even though pricing is modelled.
+
+The short strike was located by inverting the delta definition:
+\begin{equation}
+K_1 = S \exp\!\left( \left(r + \tfrac{\sigma^2}{2}\right)T - d_1 \sigma \sqrt{T} \right),
+\qquad d_1 = -\Phi^{-1}(0.30) = 0.5244,
+\end{equation}
+then rounded to the nearest whole dollar to reflect actual SPY strike spacing.
+
+Validation: realised short delta $-0.300$ against a $-0.30$ target; strikes 2.50\% below spot on
+average; mean credit \$28.70; and zero violations of the theoretical P\&L bounds
+$[-(100-\text{credit}), +\text{credit}]$ across all 9,201 trades.
+
+\subsection{Performance}
+
+\begin{table}[h]
+\centering
+\caption{Simulated per-trade profit and loss ($n=9{,}201$)}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Cost assumption & Mean & HAC $t$ & Subsample $t$ & Win rate & Worst \\
+\midrule
+Gross & \$11.85 & 9.74 & 5.98 -- 8.11 & 82.2\% & $-$\$85.41 \\
+Net of \$2.00 & \$9.85 & 8.09 & 4.85 -- 6.91 & 82.0\% & $-$\$87.41 \\
+Net of \$3.50 (base) & \$8.35 & 6.86 & 4.00 -- 6.02 & 82.0\% & $-$\$88.91 \\
+Net of \$6.00 & \$5.85 & 4.80 & 2.59 -- 4.52 & 81.9\% & $-$\$91.41 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Results are positive under every cost assumption tested. Evaluated on the second half of the sample
+only (2008 onwards, $n=4{,}600$, net of \$3.50), mean profit was \textbf{\$9.72} --- \emph{stronger}
+than the full sample, indicating no decay.
+
+\subsection{Where the edge originates}
+
+Decomposing the base case: the mean winning trade returns the full credit of \$28.70, while the mean
+loss is approximately \$66. That payoff ratio implies a breakeven win rate of
+\begin{equation}
+\frac{66}{66 + 28.70} = 69.7\%.
+\end{equation}
+A fairly priced spread should therefore win roughly seven times in ten. The realised rate was
+\textbf{82.2\%}. This 12.5 percentage-point gap \emph{is} the edge --- the same variance risk premium
+measured in Section 3, expressed as probability rather than volatility points. It follows that a high
+win rate is not itself evidence of an edge; only its excess over the breakeven rate implied by the
+payoff ratio is informative.
+
+\subsection{Volatility timing: nine filters, nine failures}
+
+\begin{table}[h]
+\centering
+\caption{Filter comparison, full sample, net of \$3.50. \textit{Annual est.} $= 12 \times$ mean
+$\times$ share, i.e.\ expected annual profit running one position at a time}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Filter & $n$ & Share & Mean & Subsample $t$ & Win \% & Annual est. \\
+\midrule
+\textbf{No filter} & 9,201 & 1.00 & \$8.35 & 4.00 & 82.0 & \textbf{100.14} \\
+VIX $\leq$ 35 & 8,848 & 0.96 & \$8.17 & 3.43 & 81.9 & 94.28 \\
+VIX $\leq$ 30 & 8,467 & 0.92 & \$7.63 & 2.60 & 81.5 & 84.22 \\
+VIX $\leq$ 25 & 7,603 & 0.83 & \$7.30 & 2.48 & 81.4 & 72.36 \\
+VIX $\leq$ 20 & 5,778 & 0.63 & \$8.39 & 2.54 & 82.9 & 63.22 \\
+VIX 15--30 & 5,520 & 0.60 & \$6.86 & 1.30 & 80.1 & 49.41 \\
+VIX $\geq$ 20 & 3,427 & 0.37 & \$8.29 & 0.54 & 80.4 & 37.06 \\
+VIX $\geq$ 25 & 1,601 & 0.17 & \$13.36 & 2.04 & 84.8 & 27.90 \\
+VIX $\geq$ 30 & 736 & 0.08 & \textbf{\$16.53} & 1.28 & \textbf{87.8} & 15.87 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No filter improves on unconditional entry. High-VIX subsets produce the highest per-trade profit
+(\$16.53) and highest win rate (87.8\%) of any subset --- the opposite of the common intuition --- but
+occur too rarely to build a year around. The mechanism is that delta-targeting automatically widens
+the strike distance as volatility rises: a $-0.30$ delta 21-day put sits roughly 1.5\% below spot at
+VIX 12 but approximately 5\% below at VIX 40, so richer premium and greater cushion arrive together.
+
+Two features indicate the remaining differences are noise. The $\leq$ filters are non-monotonic
+($\leq$20: 8.39, $\leq$25: 7.30, $\leq$30: 7.63, $\leq$35: 8.17) where a genuine effect would improve
+steadily as the cap tightens. And the conservative subsample statistic falls below conventional
+significance for most filters, since restricting the sample destroys the power needed to detect
+anything. The out-of-sample half reproduces the same ordering.
+
+\subsection{Annual pattern and equity beta}
+
+Seven of thirty-seven years were unprofitable: 2000, 2001, 2002, 2007, 2008, 2018 and 2022. Every one
+is an equity bear market. Since a bull put spread carries positive delta, a material share of the
+simulated return is ordinary equity exposure rather than volatility premium --- a return obtainable
+more cheaply from an index fund.
+
+One contrast is instructive: 2020 was strongly profitable ($+$\$13.43 per trade) despite containing the
+worst single VRP observation in the dataset, while 2022 lost \$11.31 per trade in a far less dramatic
+year. A sharp crash damages a few trades and then offers rich premiums on re-entry; a prolonged decline
+bleeds the strategy continuously. \emph{Duration of drawdown matters more than depth.}
+
+\section{Discussion}
+
+\subsection{Interpretation}
+
+The variance risk premium exists, is large, is robust across four inference methods, and has not decayed
+over 36 years. It is not a market inefficiency. The skewness of $-3.65$, the tail episodes of Table 3,
+and the alignment of losing years with bear markets all indicate compensation for bearing risk that
+other participants wish to shed. Sellers of volatility are paid a steady fee in exchange for absorbing
+rare, severe losses --- structurally the business of an insurer.
+
+The practical implication for strategy design is unusually simple. Every attempt to improve on mechanical,
+unconditional entry made results worse. Mechanical execution is not a simplification adopted for
+convenience; it is the finding.
+
+\subsection{Implications for larger accounts}
+
+This study measures per-trade expectancy, which is a property of the instrument rather than of the
+account trading it. Capital does not alter the premium; it alters how much of the premium survives to
+the account, through four channels.
+
+\textbf{Cost drag falls with position size.} Commissions and bid--ask are approximately fixed in dollar
+terms per trade, so they shrink as a proportion of a larger credit. Section 4 shows the effect
+directly: costs of \$3.50 reduce mean profit from \$11.85 to \$8.35, a drag of 30\%. A wider spread
+collecting proportionally more premium for the same fixed cost would retain a result closer to the
+gross figure. The gap between the gross and net rows of Table 6 is therefore an upper bound on what
+scale alone could recover.
+
+\textbf{Concurrency reduces variance.} A larger account can hold several positions opened on different
+dates, so performance no longer depends on which 21-day windows happened to be sampled. This does not
+change expected return but should reduce the dispersion around it.
+
+\textbf{More structures become available.} Section 4.3 shows that the long leg truncates the premium
+captured: it bounds the loss but also gives back part of the credit. With sufficient collateral,
+cash-secured puts would capture the untruncated premium --- at the cost of removing the floor that
+bounds the outcomes in Table 3 at \$71. Given the February 2020 episode, that trade-off is not
+obviously favourable at any account size.
+
+\textbf{Sizing determines whether expectancy is realised.} A positive mean is only collected by a
+participant who survives the loss distribution to collect it. Sufficient capital to size positions at a
+small fraction of the account is a precondition for the results in Section 4 to translate into account
+performance.
+
+None of these channels is tested here. Wider spreads are not scaled copies of narrower ones: they carry
+different net delta, different liquidity, and different assignment characteristics. The observations
+above are implications of the reported results, not additional findings.
+
+\subsection{Limitations}
+
+\textbf{1. Volatility skew is omitted.} Both legs were priced at VIX rather than at each strike's own
+implied volatility. Real out-of-the-money puts trade on a skewed surface, and VIX --- a variance-swap
+construction weighting across many strikes --- is not the implied volatility of any particular option.
+The sign of the resulting bias is not determinable without the surface. This is the largest unquantified
+error in the study.
+
+\textbf{2. Fills are assumed at theoretical value.} Real execution occurs at bid or ask. The cost cases
+approximate this but do not model it; the difference between \$3.50 and \$6.00 of round-trip cost changes
+the mean result by 30\%.
+
+\textbf{3. Positions overlap.} Daily entry with 21-day holds implies roughly 21 concurrent positions.
+Cumulative totals are therefore meaningless and only per-trade figures are reported.
+
+\textbf{4. HAC and subsample statistics diverge} throughout Section 4, unlike Section 3 where they agreed.
+The assumption-free subsample range is the more credible figure.
+
+\textbf{5. Return on risk capital remains high} relative to CBOE's published put-writing benchmarks. Part
+is explained by the structural leverage of defined-risk spreads, but the gap is not fully reconciled.
+
+\textbf{6. Equity beta is not separated} from volatility premium.
+
+\textbf{7. No trade management.} Positions were held to expiry, unlike practical implementations that exit
+at partial profit.
+
+\textbf{8. Position sizing is not addressed.} The worst simulated trade lost \$88.91. Whether a
+sequence of such losses is survivable depends on account size and sizing policy, neither of which is
+examined here. Expectancy and survival are separate questions; this study addresses only the first.
+
+\section{Conclusion}
+
+Implied volatility on S\&P 500 index options has exceeded subsequent realised volatility by an average of
+4.10 volatility points since 1990. The effect is statistically robust under correct treatment of
+overlapping windows, present in every decade examined, and captured in simulation by a defined-risk
+option spread returning \$8.35 per trade net of costs.
+
+The premium is compensation for crash risk rather than a market inefficiency, and its risk-adjusted
+attractiveness has deteriorated markedly since the 1990s even as its magnitude has held. Attempts to
+time entry by volatility regime uniformly failed.
+
+Whether the effect is exploitable in practice remains open, and turns on two assumptions this study
+could not test: the shape of the volatility surface at the strikes actually traded, and the cost of
+real execution. Both require option chain data rather than index data. That extension --- repricing the
+same trades against historical quotes from OptionMetrics --- is the natural continuation of this work.
+
+\section*{Reproducibility}
+
+All analysis was conducted in Python (pandas, NumPy, SciPy, statsmodels) using publicly available data.
+Code, methodology specifications with pre-registered falsification criteria, and full result outputs are
+available on request. Falsification criteria were committed to in writing before data examination in both
+studies.
+
+\section*{Note on tools}
+
+Analysis code was written by the author. Methodology design, statistical review and manuscript
+preparation were carried out in collaboration with an AI assistant (Claude, Anthropic). All results were
+computed and verified by the author.
+
+\begin{thebibliography}{9}
+\small
+\bibitem{bs} Black, F. and Scholes, M. (1973). The Pricing of Options and Corporate Liabilities.
+\textit{Journal of Political Economy}, 81(3), 637--654.
+\bibitem{bakshi} Bakshi, G. and Kapadia, N. (2003). Delta-Hedged Gains and the Negative Market Volatility
+Risk Premium. \textit{Review of Financial Studies}, 16(2), 527--566.
+\bibitem{carrwu} Carr, P. and Wu, L. (2009). Variance Risk Premiums. \textit{Review of Financial Studies},
+22(3), 1311--1341.
+\bibitem{btz} Bollerslev, T., Tauchen, G. and Zhou, H. (2009). Expected Stock Returns and Variance Risk
+Premia. \textit{Review of Financial Studies}, 22(11), 4463--4492.
+\bibitem{nw} Newey, W. K. and West, K. D. (1987). A Simple, Positive Semi-Definite, Heteroskedasticity and
+Autocorrelation Consistent Covariance Matrix. \textit{Econometrica}, 55(3), 703--708.
+\bibitem{cboe} Chicago Board Options Exchange (2019). \textit{Cboe Volatility Index (VIX) White Paper}.
+\end{thebibliography}
+
+\end{document}
