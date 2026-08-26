@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "The Variance Risk Premium and a Defined-Risk Option Strategy: Evidence from S&P 500 Options, 1990-2026"
+abstract: >-
+  An empirical study of whether the variance risk premium exists, persists,
+  and is captured by a defined-risk option strategy. Using 9,178 daily
+  observations of VIX against subsequent 21-day realised volatility of the
+  S&P 500, the mean premium is +4.10 volatility points (Newey-West 95% CI
+  [3.57, 4.62]), robust to autocorrelation correction, distribution-free
+  bootstrap, and decade-by-decade subsampling. A simulated bull put spread
+  returns $8.35 per trade net of costs across 9,201 trades with no
+  out-of-sample decay. Nine volatility-based timing filters were tested and
+  all underperformed unconditional entry.
+authors:
+  - family-names: Yuan
+    given-names: Alex
+version: 1.0.0
+date-released: 2026-08-26
+license: MIT
+type: software
+keywords:
+  - variance risk premium
+  - implied volatility
+  - realised volatility
+  - options
+  - VIX
+  - Newey-West
+  - quantitative finance
