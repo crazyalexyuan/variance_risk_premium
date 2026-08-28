@@ -1,7 +1,7 @@
 # Test A2 — Findings: Simulated Bull Put Spread
 
 *Analysis: Alex, August 2026. Simulated from Black–Scholes pricing at VIX; not a true backtest.*
-*Criteria G1–G3 pre-registered in `test_a2_spec.md` §0.*
+*Criteria G1–G3 pre-registered in `02_preregistration_spread.md` §0.*
 
 ---
 

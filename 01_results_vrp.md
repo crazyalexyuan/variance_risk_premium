@@ -1,7 +1,7 @@
 # Test A — Findings: Does the Variance Risk Premium Exist?
 
 *Analysis: Alex, August 2026. Draft written by Claude from Alex's computed results, for review.*
-*Falsification criteria pre-registered in `test_a_vrp_spec.md` §0 before analysis began.*
+*Falsification criteria pre-registered in `01_preregistration_vrp.md` §0 before analysis began.*
 
 ---
 

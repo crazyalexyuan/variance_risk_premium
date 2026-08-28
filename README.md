@@ -1,4 +1,4 @@
- DOI: 10.5281/zenodo.22114646
+DOI: 10.5281/zenodo.22114646
 # The Variance Risk Premium and a Defined-Risk Option Strategy
 
 Evidence from S&P 500 options, 1990–2026.
@@ -27,32 +27,41 @@ Two methodological points the study emphasises:
 
 ## Contents
 
+Files are numbered in reading order. Each study has a pre-registration document written before the data was examined, and a results document reporting against it.
+
 | File | Description |
 |---|---|
 | `VRP_working_paper.pdf` | The paper (8pp) |
 | `VRP_working_paper.tex` | LaTeX source |
-| `vrp_analysis.py` | Study 1: measuring the premium from VIX and S&P 500 data |
-| `test_a2_backtest.py` | Study 2: simulated bull put spread |
-| `test_a_vrp_spec.md` | Methodology spec, Study 1 — includes pre-registered falsification criteria |
-| `test_a2_spec.md` | Methodology spec, Study 2 — same |
-| `vrp_findings.md` | Full results, Study 1 |
-| `test_a2_findings.md` | Full results, Study 2 |
+| **Study 1 — measuring the premium** | |
+| `01_preregistration_vrp.md` | Methodology and falsification criteria, written before analysis |
+| `measure_vrp.py` | Analysis code |
+| `01_results_vrp.md` | Full results and verdicts against criteria F1–F3 |
+| **Study 2 — simulated bull put spread** | |
+| `02_preregistration_spread.md` | Methodology and falsification criteria, written before analysis |
+| `simulate_spread.py` | Simulation code |
+| `02_results_spread.md` | Full results and verdicts against criteria G1–G3 |
+| `data/vrp_raw.csv` | Frozen data snapshot, so published figures reproduce exactly |
+
+### A note on the pre-registration files
+
+The two `*_preregistration_*.md` documents are the record of what was committed to before any data was examined, and their contents are preserved **byte-identical** to how they were written. Files elsewhere in this repository were renamed in a later tidying pass; the pre-registration documents were deliberately excluded from that pass, so their internal references still use the original filenames (`vrp_analysis.py`, `vrp_findings.md`). Those refer to what are now `measure_vrp.py` and `01_results_vrp.md`. The alternative — editing them for consistency — would have compromised the only thing that makes a pre-registration meaningful.
 
 ## Reproducing
 
 ```bash
 pip install -r requirements.txt
-python vrp_analysis.py
-python test_a2_backtest.py
+python measure_vrp.py        # uses the committed data snapshot
+python simulate_spread.py
 ```
 
-Data is pulled from Yahoo Finance at runtime (`^VIX`, `^GSPC`, `^IRX`), so results will extend as new data becomes available and will not match the paper's figures exactly.
+`measure_vrp.py` runs against `data/vrp_raw.csv`, a frozen snapshot, so the figures reproduce those in the paper exactly. Pass `--refresh` to pull current data from Yahoo Finance instead (`^VIX`, `^GSPC`, `^IRX`); results will then extend beyond the paper's sample and will not match it.
 
 ## Method
 
 Realised volatility over the 21 trading days *following* each date is computed from log returns as `RV = 100 × √((252/21) × Σr²)`, and the premium is `VIX − RV`. Because consecutive daily observations share 20 of their 21 forward returns, inference uses three corrections: non-overlapping subsampling across all 21 starting offsets, Newey–West HAC standard errors with `maxlags=21`, and a distribution-free bootstrap.
 
-Falsification criteria were committed to in writing before the data was examined, and are reported against explicitly. They are preserved unedited in the spec files.
+Falsification criteria were committed to in writing before the data was examined, and are reported against explicitly.
 
 ## Limitations
 

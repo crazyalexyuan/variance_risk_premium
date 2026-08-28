@@ -1,114 +1,14 @@
-import pandas as pd
-import numpy as np
-import yfinance as yf
-data = yf.download(['^VIX', '^GSPC'], start='1990-01-01', end='2026-08-15')
-datatable = {
-'vix': data['Close']['^VIX'],
-'spx': data['Close']['^GSPC'],
-'returns': np.log(data['Close']['^GSPC'] / data['Close']['^GSPC'].shift(1))
-}
-df = pd.DataFrame(datatable)
-returns_squared = df['returns'].pow(2)
-rv_sum = returns_squared.rolling(21).sum().shift(-21)
-rv_var = (252/21) * rv_sum
-rv = 100 * np.sqrt(rv_var)
-df['volatility'] = rv
-df['vrp_vol'] = df['vix'] - df['volatility']        
-df['vrp_var'] = df['vix']**2 - df['volatility']**2    
-df = df.dropna()
-print(df.shape)
-print(df.head())
-print(df.tail())
-print(df.describe())
-print(df.isna().sum())
-print(df['returns'].mean())
-print(df['returns'].std())
-print(df['returns'].std()*np.sqrt(252))
-print(df['volatility'].mean())
-print(df['vrp_vol'].median())
-print(df['vrp_vol'].mean())
-print(df['vrp_vol'].std())
-print((df['vrp_vol'] > 0).mean())
-print(df['vrp_vol'].plot(figsize=(14,4)))
+"""
+Test A2 — Simulated bull put spread on a SPY-scaled S&P 500.
 
+Approximation, not a backtest. Options are priced with Black-Scholes using VIX as the
+implied volatility for BOTH legs, which ignores volatility skew entirely. See
+02_preregistration_spread.md §8 before believing any number this produces.
 
-# %%
-from scipy import stats
-stats.ttest_1samp(df['vrp_vol'], 0)
-
-
-# %%
-ts = []
-for offset in range(21):
-    sub = df['vrp_vol'].iloc[offset::21]
-    t, p = stats.ttest_1samp(sub, 0)
-    ts.append(t)
-print(min(ts), max(ts))
-
-# %%
-import statsmodels.api as sm
-res = sm.OLS(df['vrp_vol'], np.ones(len(df))).fit(cov_type='HAC', cov_kwds={'maxlags': 21})
-print(res.summary())
-
-# %%
-df['vrp_vol'].describe(percentiles=[.01, .05, .25, .5, .75, .95, .99])
-df['vrp_vol'].resample('ME').min().nsmallest(10)
-df.loc['2010':'2019', 'vrp_vol']
-
-# %%
-# ---- Sub-period stability with HAC intervals ----
-periods = [('1990s', '1990', '1999'), ('2000s', '2000', '2009'),
-           ('2010s', '2010', '2019'), ('2020s', '2020', '2026')]
-
-rows = []
-for name, start, end in periods:
-    sub = df.loc[start:end, 'vrp_vol']
-    res = sm.OLS(sub, np.ones(len(sub))).fit(cov_type='HAC', cov_kwds={'maxlags': 21})
-    ci_low, ci_high = np.asarray(res.conf_int())[0]
-    rows.append({
-        'period': name,
-        'n': len(sub),
-        'mean': sub.mean(),
-        'std': sub.std(),
-        'pct_pos': (sub > 0).mean(),
-        'mean_over_std': sub.mean() / sub.std(),
-        'ci_low': ci_low,
-        'ci_high': ci_high,
-    })
-
-subperiods = pd.DataFrame(rows).set_index('period')
-print(subperiods.round(3))
-
-
-# ---- Distribution percentiles ----
-print(df['vrp_vol'].describe(percentiles=[.01, .05, .25, .5, .75, .95, .99]).round(3))
-print('skew', df['vrp_vol'].skew().round(3), 'kurtosis', df['vrp_vol'].kurtosis().round(3))
-
-
-# ---- Ten worst episodes, with context ----
-monthly_worst_dates = df.groupby(df.index.to_period('M'))['vrp_vol'].idxmin()
-worst = df.loc[monthly_worst_dates, ['vix', 'volatility', 'vrp_vol']].nsmallest(10, 'vrp_vol')
-print(worst.round(2))
-
-
-# ---- Bootstrap CI (addresses the non-normality limitation) ----
-indep = df['vrp_vol'].iloc[::21].values          # near-independent sample
-rng = np.random.default_rng(42)
-boot = rng.choice(indep, size=(10000, len(indep)), replace=True).mean(axis=1)
-print('bootstrap 95% CI:', np.percentile(boot, [2.5, 97.5]).round(3))
-
-
-# %%
-bins = [0, 15, 20, 25, 30, 100]
-df['vix_bucket'] = pd.cut(df['vix'], bins)
-summary = df.groupby('vix_bucket', observed=True)['vrp_vol'].agg(
-    n='count', mean='mean', median='median', std='std',
-    pct_pos=lambda x: (x > 0).mean(), worst='min')
-summary['mean_ratio'] = df.groupby('vix_bucket', observed=True).apply(
-    lambda g: (g['vrp_vol'] / g['vix']).mean(), include_groups=False)
-print(summary.round(3))
-
-# %%
+Design: every trading day, open a $1-wide bull put spread with the short strike at
+~0.30 delta and 21 trading days to expiry. Hold to expiry. Compute P&L from where the
+index actually finished.
+"""
 
 import numpy as np
 import pandas as pd
@@ -116,6 +16,11 @@ import yfinance as yf
 from scipy.stats import norm, ttest_1samp
 import statsmodels.api as sm
 
+# ----------------------------------------------------------------------------------
+# Parameters. Kept at the top so every assumption is visible and changeable in one
+# place -- burying constants inside the logic is how backtests quietly become
+# unreproducible.
+# ----------------------------------------------------------------------------------
 START, END = '1990-01-01', '2026-08-15'
 N_DAYS = 21                  # trading days held; matches the VRP window from Test A
 T = N_DAYS / 252             # time to expiry in years
@@ -126,7 +31,9 @@ COST_CASES = [2.0, 3.50, 6.0]   # $ per trade: commission + slippage
 HAC_LAGS = N_DAYS            # autocorrelation extends as far as the holding period
 
 
-
+# ----------------------------------------------------------------------------------
+# 1. Data
+# ----------------------------------------------------------------------------------
 raw = yf.download(['^VIX', '^GSPC', '^IRX'], start=START, end=END,
                   auto_adjust=False, progress=False)
 
@@ -150,7 +57,13 @@ print(f"rows: {len(df)} (dropped {n_before - len(df)} incomplete)")
 print(f"range: {df.index.min().date()} to {df.index.max().date()}")
 
 
-
+# ----------------------------------------------------------------------------------
+# 2. Black-Scholes put pricer
+#
+# Written as a standalone function on plain arrays rather than inline on pandas
+# Series. Two reasons: it can be unit-tested in isolation (see below), and mixing
+# Series with numpy output risks silent index-alignment bugs.
+# ----------------------------------------------------------------------------------
 def bs_put(S, K, T, r, sigma):
     """Black-Scholes European put price. No dividends."""
     S = np.asarray(S, dtype=float)
@@ -172,8 +85,17 @@ assert bs_put(100, 100, 0.0833, 0.04, 0.40) > 1.8 * _atm, "doubling vol should ~
 print(f"pricer OK (ATM reference {_atm:.4f})")
 
 
-
-d1_target = -norm.ppf(TARGET_DELTA)     
+# ----------------------------------------------------------------------------------
+# 3. Strike selection
+#
+# Put delta = -N(-d1). Setting that to -0.30 gives N(-d1) = 0.30, so -d1 = Phi^-1(0.30)
+# and therefore d1 = -Phi^-1(0.30) = +0.5244. Inverting the definition of d1 for K:
+#
+#     d1 = [ln(S/K) + (r + s^2/2)T] / (s*sqrt(T))
+#  => ln(K/S) = (r + s^2/2)T - d1*s*sqrt(T)
+#  => K = S * exp( (r + s^2/2)T - d1*s*sqrt(T) )
+# ----------------------------------------------------------------------------------
+d1_target = -norm.ppf(TARGET_DELTA)     # +0.5244
 
 S = df['spx'] / 10                       # SPY proxy: index / 10
 sigma = df['vix'] / 100                  # VIX is quoted in percentage points
@@ -189,10 +111,14 @@ d1_actual = (np.log(S / K1) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
 delta_actual = -norm.cdf(-d1_actual)
 
 
-
+# ----------------------------------------------------------------------------------
+# 4. Credit and expiry payoff
+# ----------------------------------------------------------------------------------
 credit = pd.Series(bs_put(S, K1, T, r, sigma) - bs_put(S, K2, T, r, sigma), index=df.index)
 
-
+# shift(-N_DAYS) pulls the value from N_DAYS rows LATER into the current row, so at
+# date t this is the index level at expiry. The last N_DAYS rows become NaN because
+# their expiry hasn't happened -- same forward-window logic as the VRP series.
 S_T = S.shift(-N_DAYS)
 
 # At expiry the spread is worth the intrinsic value of the short put minus that of
@@ -208,7 +134,13 @@ trades = pd.DataFrame({
 }).dropna()
 
 
-
+# ----------------------------------------------------------------------------------
+# 5. Validation. Run BEFORE interpreting anything.
+#
+# A bull put spread's P&L is mathematically confined to [-(WIDTH*100 - credit), +credit].
+# Any value outside that range means a bug -- most likely a misaligned expiry lookup
+# or a units error -- not an interesting finding.
+# ----------------------------------------------------------------------------------
 max_profit = trades['credit'] * CONTRACT
 max_loss = -(WIDTH * CONTRACT - trades['credit'] * CONTRACT)
 violations = ((trades['pnl_gross'] > max_profit + 1e-6) |
@@ -224,7 +156,12 @@ print(f"P&L range: {trades['pnl_gross'].min():.2f} to {trades['pnl_gross'].max()
 print(f"BOUNDS VIOLATIONS: {violations}  <-- must be 0")
 
 
-
+# ----------------------------------------------------------------------------------
+# 6. Inference helpers
+#
+# Daily entries with 21-day holds overlap, exactly as the VRP series did, so ordinary
+# standard errors are invalid for the same reason. Reuse both corrections.
+# ----------------------------------------------------------------------------------
 def hac(x, lags=HAC_LAGS):
     """Mean with Newey-West corrected t-stat and 95% CI."""
     x = pd.Series(x).dropna()
@@ -253,7 +190,9 @@ def summarise(pnl, label):
     print(f"  total        ${pnl.sum():,.0f}")
 
 
-
+# ----------------------------------------------------------------------------------
+# 7. Results
+# ----------------------------------------------------------------------------------
 print("\n=== HEADLINE: all trades, unfiltered ===")
 summarise(trades['pnl_gross'], "GROSS (no costs)")
 for c in COST_CASES:
@@ -279,29 +218,3 @@ print("\n=== BY YEAR (net of $3.50) ===")
 yearly = (trades['pnl_gross'] - 3.50).groupby(trades.index.year).agg(
     n='count', mean='mean', total='sum', worst='min')
 print(yearly.round(2).to_string())
-
-# %%
-CONFIGS = [('no filter', 0, 999), ('VIX <= 20', 0, 20), ('VIX <= 25', 0, 25),
-           ('VIX <= 30', 0, 30), ('VIX <= 35', 0, 35), ('VIX 15-30', 15, 30),
-           ('VIX >= 20', 20, 999), ('VIX >= 25', 25, 999), ('VIX >= 30', 30, 999)]
-
-def sweep(tr, cost=3.50):
-    out = []
-    for name, lo, hi in CONFIGS:
-        sel = tr[(tr['vix'] >= lo) & (tr['vix'] <= hi)]
-        if len(sel) < 200:
-            continue
-        pnl = sel['pnl_gross'] - cost
-        m, t, _, _ = hac(pnl)
-        out.append({'filter': name, 'n': len(sel),
-                    'share': len(sel) / len(tr),
-                    'mean': m, 'hac_t': t,
-                    'sub_t_min': min(subsample_t(pnl)),
-                    'win%': (pnl > 0).mean() * 100,
-                    'annual_est': 12 * m * (len(sel) / len(tr))})
-    return pd.DataFrame(out).set_index('filter').round(2)
-
-print("FULL SAMPLE\n", sweep(trades))
-print("\nOUT-OF-SAMPLE HALF\n", sweep(oos))
-
-
