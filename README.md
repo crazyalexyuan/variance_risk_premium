@@ -41,7 +41,8 @@ Files are numbered in reading order. Each study has a pre-registration document 
 | `02_preregistration_spread.md` | Methodology and falsification criteria, written before analysis |
 | `simulate_spread.py` | Simulation code |
 | `02_results_spread.md` | Full results and verdicts against criteria G1–G3 |
-| `data/vrp_raw.csv` | Frozen data snapshot, so published figures reproduce exactly |
+| `data/vrp_raw.csv` | Frozen data snapshot for Study 1, so published figures reproduce exactly |
+| `AUTHORS_NOTE.md` | Where the question came from, what I contributed, and what I would do differently |
 
 ### A note on the pre-registration files
 
