@@ -5,6 +5,8 @@ Evidence from S&P 500 options, 1990–2026.
 
 **[📄 Read the paper (PDF)](VRP_working_paper.pdf)**
 
+**[📝 Author's note](AUTHORS_NOTE.md)** 
+
 ---
 
 ## Summary
