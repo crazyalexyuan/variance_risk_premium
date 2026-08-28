@@ -1,4 +1,4 @@
-DOI: 10.5281/zenodo.22114646
+https://doi.org/10.5281/zenodo.22114646
 # The Variance Risk Premium and a Defined-Risk Option Strategy
 
 Evidence from S&P 500 options, 1990–2026.
